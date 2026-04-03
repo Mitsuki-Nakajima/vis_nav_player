@@ -1,7 +1,6 @@
-# Visual Navigation Game (Example Player Code)
+# Visual Navigation Game
 
-This is the course project platform for NYU ROB-GY 6203 Robot Perception. 
-For more information, please reach out to AI4CE lab (cfeng at nyu dot edu).
+This is the course project for ROB-UY 3203.
 
 # Instructions for Players
 1. Install
@@ -15,7 +14,7 @@ conda activate game
 2. Include the exploration data
 Download the provided exploration dataset and place it under:
 ```commandline
-data/exploration_data/traj_0/
+data/exploration_data/dataset/image.jpg
 ```
 Ensure the directory structure is correct before running the program.
 
