@@ -25,6 +25,10 @@ class TrajectoryGraphPlanner:
         self.goal_node = None
         self.goal_vecs = None
         self.goal_front_vec = None
+<<<<<<< HEAD
+=======
+        self.goal_dists: dict[int, float] = {}
+>>>>>>> 38b10aa (Update)
         self._load_exploration_data()
 
     def _load_exploration_data(self):
@@ -133,12 +137,56 @@ class TrajectoryGraphPlanner:
         sims = database @ self.goal_front_vec
         self.goal_node = int(np.argmax(sims))
         print(f"Goal node = {self.goal_node}, sim={float(sims[self.goal_node]):.4f}")
+<<<<<<< HEAD
 
     def path_from_node(self, start: int) -> list[int]:
         try:
             return nx.shortest_path(self.G, start, self.goal_node, weight="weight")
         except nx.NetworkXNoPath:
             return [start]
+=======
+        if self.G is not None:
+            print("Precomputing goal distances...")
+            self.goal_dists = nx.single_source_dijkstra_path_length(self.G, self.goal_node, weight="weight")
+
+    def goal_distance(self, start: int | None) -> int:
+        if start is None:
+            return 9000
+        d = self.goal_dists.get(int(start), 9000.0)
+        if d >= 1e8:
+            return 9000
+        return int(round(float(d)))
+
+    def path_from_node(self, start: int) -> list[int]:
+        """Return a short executable preview path using precomputed goal distances.
+
+        This avoids running full Dijkstra every frame. The HUD should use
+        goal_distance() for the real hops estimate.
+        """
+        if start is None or self.goal_node is None:
+            return []
+        cur = int(start)
+        path = [cur]
+        seen = {cur}
+        max_steps = max(2, self.cfg.max_path_preview_nodes)
+        for _ in range(max_steps):
+            if cur == self.goal_node:
+                break
+            candidates = []
+            for nb in self.G.neighbors(cur):
+                d = self.goal_dists.get(int(nb), 1e9)
+                candidates.append((d, int(nb)))
+            if not candidates:
+                break
+            candidates.sort(key=lambda x: x[0])
+            nxt = candidates[0][1]
+            if nxt in seen:
+                break
+            path.append(nxt)
+            seen.add(nxt)
+            cur = nxt
+        return path
+>>>>>>> 38b10aa (Update)
 
     def edge_action(self, a: int, b: int) -> str:
         reverse = {"FORWARD": "BACKWARD", "BACKWARD": "FORWARD", "LEFT": "RIGHT", "RIGHT": "LEFT"}
