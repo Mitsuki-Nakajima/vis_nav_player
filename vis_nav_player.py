@@ -11,6 +11,10 @@ and displaying navigation status and goal detection.
 import argparse
 import os
 import sys
+<<<<<<< HEAD
+=======
+import time
+>>>>>>> 38b10aa (Update)
 
 import cv2
 import pygame
@@ -25,9 +29,16 @@ from controller import AutoController
 from features import VLADExtractor
 from localizer import SmoothedLocalizer
 from planner import TrajectoryGraphPlanner
+<<<<<<< HEAD
 
 
 class FinalManualAssistPlayer(Player):
+=======
+from motion_feedback import ShiTomasiKLTFeedback
+
+
+class FinalAutoAssistPlayer(Player):
+>>>>>>> 38b10aa (Update)
     def __init__(self, cfg: VisNavConfig | None = None):
         self.cfg = cfg or VisNavConfig()
         self.fpv = None
@@ -45,6 +56,11 @@ class FinalManualAssistPlayer(Player):
         self.extractor = VLADExtractor(self.cfg)
         self.planner = TrajectoryGraphPlanner(self.cfg)
         self.controller = AutoController(self.cfg)
+<<<<<<< HEAD
+=======
+        self.motion_feedback = ShiTomasiKLTFeedback(self.cfg)
+        self.motion_state = None
+>>>>>>> 38b10aa (Update)
         self.database = None
         self.localizer = None
 
@@ -62,6 +78,11 @@ class FinalManualAssistPlayer(Player):
         self._font_small = None
         self._font_big = None
         self.controller.reset()
+<<<<<<< HEAD
+=======
+        self.motion_feedback.reset()
+        self.motion_state = None
+>>>>>>> 38b10aa (Update)
         pygame.init()
         self.keymap = {
             pygame.K_LEFT: Action.LEFT,
@@ -93,6 +114,10 @@ class FinalManualAssistPlayer(Player):
         feat = self.extractor.extract(self.fpv)
         loc = self.localizer.update(feat, self.fpv)
         loc.current_path = self.planner.path_from_node(loc.current_node)
+<<<<<<< HEAD
+=======
+        loc.goal_hops = self.planner.goal_distance(loc.current_node)
+>>>>>>> 38b10aa (Update)
         _, action_name = self.planner.first_executable_step(loc.current_path)
         plan_action = {
             "FORWARD": Action.FORWARD,
@@ -102,6 +127,7 @@ class FinalManualAssistPlayer(Player):
         }.get(action_name, Action.IDLE)
         near_goal = (
             loc.current_node == self.planner.goal_node or
+<<<<<<< HEAD
             len(loc.current_path) - 1 <= self.cfg.max_near_goal_hops
         )
         stagnating = self.localizer.is_stagnating()
@@ -111,6 +137,29 @@ class FinalManualAssistPlayer(Player):
 
     def _update_goal_assist(self, loc):
         path_hops = len(loc.current_path) - 1 if loc.current_path else 999
+=======
+            getattr(loc, "goal_hops", 999) <= self.cfg.max_near_goal_hops
+        )
+        stagnating = self.localizer.is_stagnating()
+
+        # Shi-Tomasi/KLT motion feedback.  v17 passes richer motion
+        # state into the controller using dynamic fields on loc, so KLT can
+        # override LOW-confidence planner turns when physical motion is good.
+        prev_cmd = self.controller.state.last_auto_action
+        self.motion_state = self.motion_feedback.update(self.fpv, prev_cmd)
+        motion_stuck = bool(self.motion_state and self.motion_state.stuck)
+        loc.motion_stuck = motion_stuck
+        loc.motion_good_forward = bool(self.motion_state and self.motion_state.good_forward)
+        loc.motion_flow = 0.0 if self.motion_state is None else float(self.motion_state.median_flow)
+        loc.motion_points = 0 if self.motion_state is None else int(self.motion_state.tracked_points)
+
+        auto_action = self.controller.compute_action(loc, plan_action, near_goal, stagnating or motion_stuck)
+        self.controller.state.auto_action = auto_action
+        return auto_action, loc, plan_action, stagnating or motion_stuck
+
+    def _update_goal_assist(self, loc):
+        path_hops = getattr(loc, "goal_hops", 999)
+>>>>>>> 38b10aa (Update)
         near_goal_by_path = path_hops <= self.cfg.assist_near_goal_hops
 
         # More forgiving than the original: do not require only the front target view.
@@ -145,11 +194,21 @@ class FinalManualAssistPlayer(Player):
             f"node {loc.current_node} sim {0.0 if loc.current_sim is None else loc.current_sim:.3f} | "
             f"goal best view {loc.goal_best_view} sim {loc.goal_best_sim:.3f} front {loc.goal_front_sim:.3f}"
         )
+<<<<<<< HEAD
         path_hops = len(loc.current_path) - 1 if loc.current_path else 999
+=======
+        path_hops = getattr(loc, "goal_hops", 999)
+>>>>>>> 38b10aa (Update)
         line3 = (
             f"{self.last_assist_text} | hops {path_hops} | wall {int(loc.front_wall)} "
             f"L {loc.left_open:.1f} R {loc.right_open:.1f}"
         )
+<<<<<<< HEAD
+=======
+        line3 += f" | floor C{getattr(loc, 'floor_center', 0):.1f} L{getattr(loc, 'floor_left', 0):.1f} R{getattr(loc, 'floor_right', 0):.1f} {getattr(loc, 'corner_hint', 'NONE')}"
+        if self.motion_state is not None:
+            line3 += f" | flow {self.motion_state.median_flow:.2f} pts {self.motion_state.tracked_points}"
+>>>>>>> 38b10aa (Update)
         if stagnating:
             line3 += " | STUCK"
         return line1, line2, line3
@@ -205,7 +264,11 @@ class FinalManualAssistPlayer(Player):
         x = max(0, (screen_w - new_w) // 2)
         y = max(top_margin, top_margin + (avail_h - new_h) // 2)
 
+<<<<<<< HEAD
         pygame.display.set_caption("FinalManualAssistPlayer")
+=======
+        pygame.display.set_caption("FinalAutoAssistPlayer")
+>>>>>>> 38b10aa (Update)
         self.screen.blit(surface, (x, y))
 
         if overlay is not None:
@@ -303,9 +366,29 @@ def parse_args():
     p.add_argument("--subsample", type=int, default=None)
     p.add_argument("--n-clusters", type=int, default=None)
     p.add_argument("--top-k", type=int, default=None)
+<<<<<<< HEAD
     return p.parse_args()
 
 
+=======
+    p.add_argument("--game-speed", type=float, default=None)
+    return p.parse_args()
+
+
+def install_game_speed_patch(multiplier: float) -> None:
+    """Speed up the compiled game loop by shortening frame sleeps.
+    """
+    if multiplier <= 1.0:
+        return
+    original_sleep = time.sleep
+
+    def boosted_sleep(seconds: float) -> None:
+        original_sleep(max(0.0, seconds / multiplier))
+
+    time.sleep = boosted_sleep
+
+
+>>>>>>> 38b10aa (Update)
 if __name__ == "__main__":
     args = parse_args()
     cfg_kwargs = {}
@@ -315,6 +398,15 @@ if __name__ == "__main__":
         cfg_kwargs["n_clusters"] = args.n_clusters
     if args.top_k is not None:
         cfg_kwargs["top_k_shortcuts"] = args.top_k
+<<<<<<< HEAD
     cfg = VisNavConfig(**cfg_kwargs)
     import vis_nav_game as vng
     vng.play(the_player=FinalManualAssistPlayer(cfg))
+=======
+    if args.game_speed is not None:
+        cfg_kwargs["game_speed_multiplier"] = args.game_speed
+    cfg = VisNavConfig(**cfg_kwargs)
+    import vis_nav_game as vng
+    install_game_speed_patch(cfg.game_speed_multiplier)
+    vng.play(the_player=FinalAutoAssistPlayer(cfg))
+>>>>>>> 38b10aa (Update)
